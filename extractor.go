@@ -42,7 +42,7 @@ func main() {
 			RemoveDir(saveRoot)
 		}
 		i := SaveAcb(saveRoot, f)
-		fmt.Printf("Extract: %s -> %s (%d)\n", name, saveRoot, i)
+		fmt.Printf("Extract: %s -> %s (%d files)\n", name, saveRoot, i)
 	}
 }
 

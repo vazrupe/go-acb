@@ -31,7 +31,6 @@ func main() {
 		} else {
 			ext := filepath.Ext(filename)
 			dirName := name[:len(name)-len(ext)]
-			fmt.Println(*saveDir, dirName)
 			saveRoot = filepath.Join(*saveDir, dirName)
 		}
 

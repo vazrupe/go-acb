@@ -11,6 +11,7 @@ import (
 
 var sigatureAfs2Archive = []byte{0x41, 0x46, 0x53, 0x32}
 
+// CriAfs2Archive is Afs2 archive structure
 type CriAfs2Archive struct {
 	Signature     []byte
 	Version       []byte
@@ -19,6 +20,7 @@ type CriAfs2Archive struct {
 	Files         map[uint16]CriAfs2File
 }
 
+// CriAfs2File is file data in Afs2 archive
 type CriAfs2File struct {
 	CueID                 uint16
 	FileOffsetRaw         int64
@@ -27,9 +29,13 @@ type CriAfs2File struct {
 	Data                  []byte
 }
 
+// ErrFileCountExceeds is error (file count exceeds max value for uint16)
 var ErrFileCountExceeds = errors.New("file count exceeds max value for uint16")
+
+// ErrNoAfs2Header is no afs2 archive header error
 var ErrNoAfs2Header = errors.New("no afs2 archive header")
 
+// LoadCriAfs2Archive is Afs2 struce load from readseeker
 func LoadCriAfs2Archive(buf io.ReadSeeker, offset int64) (arh *CriAfs2Archive, err error) {
 	r := endibuf.NewReader(buf)
 	r.Endian = binary.LittleEndian

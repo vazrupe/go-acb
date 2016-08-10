@@ -10,6 +10,7 @@ import (
 	"github.com/vazrupe/endibuf"
 )
 
+// CriUtfTable is '@UTF' bytes structure
 type CriUtfTable struct {
 	Signature []byte
 	Size      uint32
@@ -28,7 +29,8 @@ type CriUtfTable struct {
 	RowSize           uint16
 	NumberOfRows      uint32
 
-	buf *endibuf.Reader
+	buf        *endibuf.Reader
+	baseOffset int64
 
 	Rows []map[string]CriField
 }
@@ -42,10 +44,14 @@ type CriField struct {
 	Size   uint32
 }
 
+// SignatureCriUtfTable is utfTable signature
 var SignatureCriUtfTable = []byte("@UTF")
 
-var ErrNoUtfTableHeader = errors.New("No UtfTable Header")
-var ErrUnknownColumnType = errors.New("Unknown Column Type")
+// ErrNoUtfTableHeader is no UTF Table signature error
+var ErrNoUtfTableHeader = errors.New("no utftable header")
+
+// ErrUnknownColumnType is unknown column type error
+var ErrUnknownColumnType = errors.New("unknown column type")
 
 // NewCriUtfTable return Table Data
 func NewCriUtfTable(base io.ReadSeeker, offset int64) (table *CriUtfTable, err error) {
@@ -55,6 +61,7 @@ func NewCriUtfTable(base io.ReadSeeker, offset int64) (table *CriUtfTable, err e
 	table = &CriUtfTable{}
 
 	table.IsEncrypt = false
+	table.baseOffset = offset
 
 	magicBytes, err := r.ReadBytesFromOffset(offset, 4)
 	if err != nil {
@@ -231,6 +238,7 @@ func (tb *CriUtfTable) initializeSchema() (err error) {
 					if err != nil {
 						return err
 					}
+					field.Offset += uint32(tb.baseOffset)
 					currentOffset += 8
 				case columnTypeFloat:
 					field.Value, err = tb.buf.ReadFloat32FromOffset(constantOffset)
@@ -306,6 +314,7 @@ func (tb *CriUtfTable) initializeSchema() (err error) {
 					if err != nil {
 						return err
 					}
+					field.Offset += uint32(tb.baseOffset)
 					currentRowOffset += 8
 				case columnTypeFloat:
 					field.Value, err = tb.buf.ReadFloat32FromOffset(constantOffset)
@@ -347,6 +356,7 @@ func (tb *CriUtfTable) initializeSchema() (err error) {
 					return ErrUnknownColumnType
 				}
 			}
+
 			tb.Rows[i][field.Name] = field
 
 			currentOffset += 5

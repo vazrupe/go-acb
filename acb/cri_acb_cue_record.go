@@ -11,6 +11,7 @@ const (
 	waveformEncodeTypeNintendoDsp = 13
 )
 
+// CriAcbCueRecord is cue data structure
 type CriAcbCueRecord struct {
 	CueID          uint32
 	ReferenceType  byte

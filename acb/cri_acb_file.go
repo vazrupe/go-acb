@@ -3,8 +3,10 @@ package acb
 import (
 	"errors"
 	"os"
+	"path/filepath"
 )
 
+// CriAcbFile is Acb file structure
 type CriAcbFile struct {
 	base               *CriUtfTable
 	Cue                []CriAcbCueRecord
@@ -14,6 +16,7 @@ type CriAcbFile struct {
 	ExternalAwb *CriAfs2Archive
 }
 
+// LoadCriAcbFile is load file to *CriAcbFile
 func LoadCriAcbFile(path string) (acbFile *CriAcbFile, err error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -35,6 +38,8 @@ func LoadCriAcbFile(path string) (acbFile *CriAcbFile, err error) {
 		return
 	}
 
+	acbFile.InternalAwb = nil
+	acbFile.ExternalAwb = nil
 	internalAwbFile, ok := acbFile.base.Rows[0]["AwbFile"]
 	if ok && internalAwbFile.Size > 0 {
 		acbFile.InternalAwb, err = LoadCriAfs2Archive(acbFile.base.buf, int64(internalAwbFile.Offset))
@@ -45,7 +50,7 @@ func LoadCriAcbFile(path string) (acbFile *CriAcbFile, err error) {
 
 	streamAwbFileSize, ok := acbFile.base.Rows[0]["StreamAwbAfs2Header"].Value.(uint64)
 	if ok && streamAwbFileSize > 0 {
-		acbFile.ExternalAwb, err = LoadCriAfs2Archive(acbFile.base.buf, 0)
+		err = acbFile.initializeExternalAwbArchive(path)
 		if err != nil {
 			return
 		}
@@ -53,7 +58,8 @@ func LoadCriAcbFile(path string) (acbFile *CriAcbFile, err error) {
 	return
 }
 
-var ErrUnexpectedReferenceType = errors.New("unexpected ReferenceType")
+// ErrUnexpectedReferenceType is unexpected referencetype error
+var ErrUnexpectedReferenceType = errors.New("unexpected referencetype")
 
 func (af *CriAcbFile) initializeCueList() (err error) {
 	cueTableField, okCue := af.base.Rows[0]["CueTable"]
@@ -83,7 +89,6 @@ func (af *CriAcbFile) initializeCueList() (err error) {
 		af.Cue[i].CueID = cueTableUtf.Rows[i]["CueId"].Value.(uint32)
 		af.Cue[i].ReferenceType = cueTableUtf.Rows[i]["ReferenceType"].Value.(byte)
 		af.Cue[i].ReferenceIndex = cueTableUtf.Rows[i]["ReferenceIndex"].Value.(uint16)
-
 		switch af.Cue[i].ReferenceType {
 		case 2:
 			referenceItems := synthTableUtf.Rows[af.Cue[i].ReferenceIndex]["ReferenceItems"]
@@ -97,7 +102,7 @@ func (af *CriAcbFile) initializeCueList() (err error) {
 				referenceItemsSize = referenceItems.Size
 				referenceCorrection = referenceItemsSize - 2
 			} else {
-				referenceCorrection += 2
+				referenceCorrection += 4
 			}
 		default:
 			return ErrUnexpectedReferenceType
@@ -144,4 +149,74 @@ func (af *CriAcbFile) initializeCueNameToWaveformMap() (err error) {
 		}
 	}
 	return nil
+}
+
+// ErrAwbFileNotFound is cannot find awb file error
+var ErrAwbFileNotFound = errors.New("cannot find awb file")
+
+func (af *CriAcbFile) initializeExternalAwbArchive(basepath string) (err error) {
+	ext := filepath.Ext(basepath)
+	base := basepath[:len(basepath)-len(ext)]
+
+	formats := []string{"_streamfiles.awb", ".awb", "_STR.awb"}
+
+	find := false
+	var path string
+	for _, format := range formats {
+		path = base + format
+		if existsFile(path) {
+			find = true
+			break
+		}
+	}
+	if !find {
+		return ErrAwbFileNotFound
+	}
+	var f *os.File
+	f, err = os.Open(path)
+	if err != nil {
+		return
+	}
+	af.ExternalAwb, err = LoadCriAfs2Archive(f, 0)
+	if err != nil {
+		return
+	}
+
+	return nil
+}
+
+func existsFile(path string) bool {
+	_, err := os.Stat(path)
+	exists := err != nil
+	return exists
+}
+
+// Files returns key=filename and value=data in map
+func (af *CriAcbFile) Files() map[string][]byte {
+	fileMap := make(map[string][]byte)
+	files := make(map[uint16]CriAfs2File)
+
+	if af.ExternalAwb != nil {
+		for k, v := range af.InternalAwb.Files {
+			files[k] = v
+		}
+	}
+	if af.InternalAwb != nil {
+		for k, v := range af.InternalAwb.Files {
+			files[k] = v
+		}
+	}
+
+	for _, cue := range af.Cue {
+		file, ok := files[uint16(cue.CueID)]
+		if !ok {
+			continue
+		}
+
+		name := cue.CueName + cue.GetFileExtension()
+		data := file.Data
+
+		fileMap[name] = data
+	}
+	return fileMap
 }

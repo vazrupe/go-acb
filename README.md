@@ -17,7 +17,7 @@ Import Library:
         ...
     )
     ...
-    f, err := acb.LoadCriAcbFile(_your file path_)
+    f, err := acb.LoadCriAcbFile(YOUR_FILE_PATH)
     if err != nil {
         _load error_
     }
@@ -25,7 +25,7 @@ Import Library:
 
 Commandline Use:
 
-    go-acb [-f] [-save=_your save dir_] _acb files..._
+    go-acb [-f] [-save=YOUR_SAVE_DIR] ACB_FILEs...
 
 and examples dir
 

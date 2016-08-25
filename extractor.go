@@ -6,7 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/vazrupe/go-acb/acb"
+	//"github.com/vazrupe/go-acb/acb"
+	"./acb"
 )
 
 func main() {

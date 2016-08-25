@@ -197,7 +197,7 @@ func (af *CriAcbFile) Files() map[string][]byte {
 	files := make(map[uint16]CriAfs2File)
 
 	if af.ExternalAwb != nil {
-		for k, v := range af.InternalAwb.Files {
+		for k, v := range af.ExternalAwb.Files {
 			files[k] = v
 		}
 	}

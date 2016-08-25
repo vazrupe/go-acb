@@ -127,6 +127,13 @@ func LoadCriAfs2Archive(buf io.ReadSeeker, offset int64) (arh *CriAfs2Archive, e
 		if err != nil {
 			return nil, err
 		}
+		// remove zeros
+		for i, d := range file.Data {
+			if d > 0 {
+				file.Data = file.Data[i:]
+				break
+			}
+		}
 		arh.Files[id] = file
 	}
 
